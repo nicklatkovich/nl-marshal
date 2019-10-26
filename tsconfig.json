@@ -1,0 +1,32 @@
+{
+	"compilerOptions": {
+		"target": "es2015",
+		"module": "commonjs",
+		"allowJs": false,
+		"declaration": true,
+		"declarationMap": false,
+		"sourceMap": false,
+		"outDir": "./lib",
+		"composite": true,
+		"removeComments": false,
+		"noEmit": false,
+		"downlevelIteration": true,
+		"strict": true,
+		"noImplicitAny": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"strictPropertyInitialization": true,
+		"noImplicitThis": true,
+		"alwaysStrict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"moduleResolution": "node",
+		"esModuleInterop": true,
+		"rootDir": "./src"
+	},
+	"include": ["./src/**/*"],
+	"exclude": ["./test/**/*"]
+}

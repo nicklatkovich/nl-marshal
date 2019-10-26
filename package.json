@@ -1,0 +1,21 @@
+{
+	"name": "nl-marshal",
+	"version": "0.1.0",
+	"description": "Simple NodeJS utility to serialize or deserialize JS objects to Buffer or JSON.",
+	"main": "lib/index.js",
+	"scripts": {
+		"build": "rm -rf ./lib && rm -f ./tsconfig.tsbuildinfo && tsc",
+		"prepublishOnly": "npm run build",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"bignumber.js": "^9.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^12.7.12",
+		"ts-node": "^8.4.1",
+		"typescript": "^3.6.3"
+	},
+	"author": "NickLatkovich",
+	"license": "MIT"
+}
