@@ -13,7 +13,7 @@ export class OptionalSerializer<T extends ISerializer> extends ISerializer<Base<
 	}
 	fromJSON(value: JSON<T>): Base<T> {
 		if (value === null) return null;
-		return this.serializer.toJSON(value);
+		return this.serializer.fromJSON(value);
 	}
 	toBuffer(value: Input<T>): Buffer {
 		const missing = value === null || value === undefined;

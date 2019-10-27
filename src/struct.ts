@@ -43,3 +43,8 @@ export class StructSerializer<T extends SerializersMap> extends ISerializer<Base
 }
 
 export default function struct<T extends SerializersMap>(serializers: T) { return new StructSerializer(serializers); }
+
+export function extended<Extended extends SerializersMap, T extends SerializersMap>(
+	extended: StructSerializer<Extended>,
+	serializers: T,
+): StructSerializer<Extended & T> { return struct({ ...extended.serializers, ...serializers }); }
