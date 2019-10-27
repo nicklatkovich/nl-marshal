@@ -1,22 +1,23 @@
-export default abstract class ISerializer<TInput = any, TOutput = TInput, TJSONOutput = TOutput> {
-	abstract toJSON(value: TInput): TJSONOutput;
-	abstract fromJSON(value: TJSONOutput): TOutput;
-	abstract toBuffer(value: TInput): Buffer;
-	abstract readFromBuffer(buffer: Buffer, offset?: number): { res: TOutput, newOffset: number };
+type RawJSON = null | string | number | boolean | { [key: string]: RawJSON } | RawJSONArray;
+interface RawJSONArray extends Array<RawJSON> {}
 
-	stringify(value: TInput) { return JSON.stringify(this.toJSON(value)); }
-	parse(value: string | Buffer): TOutput {
+export default abstract class ISerializer<Base = any, Input extends Base | any = Base, JSON extends RawJSON = any> {
+	abstract toJSON(value: Input): JSON;
+	abstract fromJSON(value: JSON): Base;
+	abstract toBuffer(value: Input): Buffer;
+	abstract readFromBuffer(buffer: Buffer, offset?: number): { res: Base, newOffset: number };
+	stringify(value: Input): string { return JSON.stringify(this.toJSON(value)); }
+	parse(value: string | Buffer): Base {
 		if (Buffer.isBuffer(value)) value = value.toString();
 		return this.fromJSON(JSON.parse(value));
 	}
-
-	fromBuffer(buffer: Buffer): TOutput {
+	fromBuffer(buffer: Buffer): Base {
 		const { res, newOffset } = this.readFromBuffer(buffer);
-		if (newOffset !== buffer.length) throw new Error('excess info in the end of buffer');
+		if (newOffset !== buffer.length) throw new Error("excess info in the end of buffer");
 		return res;
 	}
 }
 
-export type InputOf<TSerializer> = TSerializer extends ISerializer<infer T, any, any> ? T : never;
-export type OutputOf<TSerializer> = TSerializer extends ISerializer<any, infer T, any> ? T : never;
-export type JSONOutputOf<TSerializer> = TSerializer extends ISerializer<any, any, infer T> ? T : never;
+export type BaseOf<Serializer> = Serializer extends ISerializer<infer T, any, any> ? T : never;
+export type InputOf<Serializer> = Serializer extends ISerializer<any, infer T, any> ? T : never;
+export type JSONOf<Serializer> = Serializer extends ISerializer<any, any, infer T> ? T : never;

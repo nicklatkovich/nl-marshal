@@ -1,7 +1,7 @@
 import ISerializer from "./ISerializer";
 import varuint from "./varuint";
 
-export class StringSerializer extends ISerializer<string> {
+export class CharsSerializer extends ISerializer<string, string, string> {
 	toJSON(value: string): string { return value; }
 	fromJSON(value: string): string { return value; }
 	toBuffer(value: string): Buffer { return Buffer.concat([varuint.toBuffer(value.length), Buffer.from(value)]); }
@@ -13,5 +13,5 @@ export class StringSerializer extends ISerializer<string> {
 	}
 }
 
-const string = new StringSerializer();
-export default string;
+const chars = new CharsSerializer();
+export default chars;
