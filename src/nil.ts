@@ -2,7 +2,7 @@ import ISerializer from "./ISerializer";
 
 type Input = null | undefined;
 
-export class EmptySerializer extends ISerializer<null, Input, null> {
+export class NilSerializer extends ISerializer<null, Input, null> {
 	toJSON(_: Input): null { return null; }
 	fromJSON(_: null): null { return null; }
 	toBuffer(_: Input): Buffer { return Buffer.from([]); }
@@ -11,5 +11,5 @@ export class EmptySerializer extends ISerializer<null, Input, null> {
 	}
 }
 
-const empty = new EmptySerializer();
-export default empty;
+const nil = new NilSerializer();
+export default nil;
