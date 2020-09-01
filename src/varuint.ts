@@ -17,7 +17,7 @@ export class VarUIntSerializer extends ISerializer<BigNumber, Input, JSON> {
 			value = new BigNumber(value);
 		} else if (typeof value === 'string') value = new BigNumber(value);
 		VarUIntSerializer.validateBN(value);
-		return value.gte(Number.MAX_SAFE_INTEGER) ? value.toString(10) : value.toNumber();
+		return value.gt(Number.MAX_SAFE_INTEGER) ? value.toString(10) : value.toNumber();
 	}
 	fromJSON(value: JSON): BigNumber {
 		const result = new BigNumber(value);
@@ -35,7 +35,7 @@ export class VarUIntSerializer extends ISerializer<BigNumber, Input, JSON> {
 			const byte = lastByte ? mod.plus(2 ** 7) : mod;
 			lastByte = false;
 			resHex = byte.toString(16).padStart(2, '0') + resHex;
-		} while (bn.gt(0));
+		} while (bn.gte(1));
 		return Buffer.from(resHex, 'hex');
 	}
 	readFromBuffer(buffer: Buffer, offset: number = 0): { res: BigNumber, newOffset: number } {
