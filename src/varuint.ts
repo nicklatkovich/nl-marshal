@@ -1,55 +1,52 @@
-import BigNumber from "bignumber.js";
-import ISerializer from "./ISerializer";
+import { BaseSerializer } from "./_base";
 
-type Input = BigNumber | number | string;
-type JSON = number | string;
+type Input = bigint | number | string;
+type Output = number | string;
 
-export class VarUIntSerializer extends ISerializer<BigNumber, Input, JSON> {
-	private static validateBN(value: BigNumber) {
-		if (!(value instanceof BigNumber)) throw new Error('invalid value type');
-		if (!value.isFinite()) throw new Error("value is not finite");
-		if (!value.isInteger()) throw new Error('value is not a integer');
-		if (value.lt(0)) throw new Error('value is negative');
-	}
-	toJSON(value: Input): JSON {
-		if (typeof value === 'number') {
-			if (Math.abs(value) > Number.MAX_SAFE_INTEGER) throw new Error('loss of accuracy');
-			value = new BigNumber(value);
-		} else if (typeof value === 'string') value = new BigNumber(value);
-		VarUIntSerializer.validateBN(value);
-		return value.gt(Number.MAX_SAFE_INTEGER) ? value.toString(10) : value.toNumber();
-	}
-	fromJSON(value: JSON): BigNumber {
-		const result = new BigNumber(value);
-		VarUIntSerializer.validateBN(result);
-		return result;
-	}
-	toBuffer(value: Input): Buffer {
-		let bn = typeof value === 'string' || typeof value === 'number' ? new BigNumber(value) : value;
-		VarUIntSerializer.validateBN(bn);
-		let resHex = '';
-		let lastByte = true;
-		do {
-			const mod = bn.mod(2 ** 7);
-			bn = bn.idiv(2 ** 7);
-			const byte = lastByte ? mod.plus(2 ** 7) : mod;
-			lastByte = false;
-			resHex = byte.toString(16).padStart(2, '0') + resHex;
-		} while (bn.gte(1));
-		return Buffer.from(resHex, 'hex');
-	}
-	readFromBuffer(buffer: Buffer, offset: number = 0): { res: BigNumber, newOffset: number } {
-		let res = new BigNumber(0);
-		while (true) {
-			if (offset >= buffer.length) throw new Error(`overflow ${buffer.toString('hex')} ${offset}`);
-			const byte = buffer[offset];
-			offset += 1;
-			const mod = byte % 2 ** 7;
-			res = res.times(2 ** 7).plus(mod);
-			if (byte >= 2 ** 7) return { res, newOffset: offset };
-		}
-	}
+function _toBase(input: Input): bigint {
+  if (typeof input !== "bigint") input = BigInt(input);
+  if (input < 0) throw new Error("Input is negative");
+  return input;
 }
 
-const varuint = new VarUIntSerializer();
-export default varuint;
+const _7bitsPower = 2 ** 7;
+
+class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
+  appendToBytes(bytes: number[], input: Input): number[] {
+    input = _toBase(input);
+    let isLastByte = true;
+    const result: number[] = [];
+    do {
+      const mod = Number(input % BigInt(_7bitsPower));
+      input /= BigInt(_7bitsPower);
+      const byte = isLastByte ? mod + _7bitsPower : mod;
+      isLastByte = false;
+      result.push(byte);
+    } while (input >= 1);
+    bytes.push(...result.reverse());
+    return bytes;
+  };
+
+  read(buffer: Buffer, offset: number): { res: bigint; cursor: number } {
+    let res = 0n;
+    while (true) {
+      if (offset >= buffer.length) throw new Error(`overflow varuint`);
+      const byte = buffer[offset];
+      offset += 1;
+      const mod = byte % _7bitsPower;
+      res = res * BigInt(_7bitsPower) + BigInt(mod);
+      if (byte >= _7bitsPower) return { res, cursor: offset };
+    }
+  }
+
+  toJSON(input: Input): Output {
+    input = _toBase(input);
+    return input > Number.MAX_SAFE_INTEGER ? input.toString(10) : Number(input);
+  }
+
+  fromJSON(input: Input): bigint {
+    return _toBase(input);
+  }
+};
+
+export const varuint = new VarUIntSerializer();
