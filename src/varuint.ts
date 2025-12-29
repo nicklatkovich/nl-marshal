@@ -1,18 +1,18 @@
-import { BaseSerializer } from "./_base";
+import { BaseSerializer } from './_base';
 
 type Input = bigint | number | string;
 type Output = number | string;
 
 function _toBase(input: Input): bigint {
-  if (typeof input !== "bigint") input = BigInt(input);
-  if (input < 0) throw new Error("Input is negative");
+  if (typeof input !== 'bigint') input = BigInt(input);
+  if (input < 0) throw new Error('Input is negative');
   return input;
 }
 
 const _7bitsPower = 2 ** 7;
 
-class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
-  appendToBytes(bytes: number[], input: Input): number[] {
+export class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
+  public appendToBytes(bytes: number[], input: Input): number[] {
     input = _toBase(input);
     let isLastByte = true;
     const result: number[] = [];
@@ -25,9 +25,9 @@ class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
     } while (input >= 1);
     bytes.push(...result.reverse());
     return bytes;
-  };
+  }
 
-  read(buffer: Buffer, offset: number): { res: bigint; cursor: number } {
+  public read(buffer: Buffer, offset: number): { res: bigint; cursor: number } {
     let res = 0n;
     while (true) {
       if (offset >= buffer.length) throw new Error(`overflow varuint`);
@@ -39,14 +39,14 @@ class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
     }
   }
 
-  toJSON(input: Input): Output {
+  public toJSON(input: Input): Output {
     input = _toBase(input);
     return input > Number.MAX_SAFE_INTEGER ? input.toString(10) : Number(input);
   }
 
-  fromJSON(input: Input): bigint {
+  public fromJSON(input: Input): bigint {
     return _toBase(input);
   }
-};
+}
 
 export const varuint = new VarUIntSerializer();

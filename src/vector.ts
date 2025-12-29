@@ -1,5 +1,5 @@
-import { BaseSerializer, BaseOf, InputOf, OutputOf, Serializer } from "./_base";
-import { varuint } from "./varuint";
+import { BaseSerializer, BaseOf, InputOf, OutputOf, Serializer } from './_base';
+import { varuint } from './varuint';
 
 type Base<T extends Serializer> = BaseOf<T>[];
 type Input<T extends Serializer> = InputOf<T>[];
@@ -10,13 +10,13 @@ export class VectorSerializer<T extends Serializer> extends BaseSerializer<Base<
     super();
   }
 
-  appendToBytes(bytes: number[], input: Input<T>): number[] {
+  public appendToBytes(bytes: number[], input: Input<T>): number[] {
     bytes = varuint.appendToBytes(bytes, input.length);
     for (const e of input) bytes = this.type.appendToBytes(bytes, e);
     return bytes;
   }
 
-  read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number; } {
+  public read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number } {
     const { res: length, cursor: lengthOffset } = varuint.read(buffer, offset);
     let cursor = lengthOffset;
     const res = new Array(Number(length)).fill(null).map(() => {
@@ -27,12 +27,12 @@ export class VectorSerializer<T extends Serializer> extends BaseSerializer<Base<
     return { res, cursor };
   }
 
-  toJSON(input: Input<T>): Output<T> {
-    return input.map((e) => this.type.toJSON(e));
+  public toJSON(input: Input<T>): Output<T> {
+    return input.map((e) => this.type.toJSON(e) as OutputOf<T>);
   }
 
-  fromJSON(output: OutputOf<T>[]): BaseOf<T>[] {
-    return output.map((e) => this.type.fromJSON(e));
+  public fromJSON(output: OutputOf<T>[]): BaseOf<T>[] {
+    return output.map((e) => this.type.fromJSON(e) as BaseOf<T>);
   }
 }
 

@@ -1,16 +1,19 @@
-import { BaseSerializer } from "./_base";
+import { BaseSerializer } from './_base';
 
 type Input = bigint | number | string;
 type Output = number | string;
 
 export class BigUIntSerializer extends BaseSerializer<bigint, Input, Output> {
-  public readonly maxValue: bigint;
+  private readonly _maxValue: bigint;
+  public get maxValue(): bigint {
+    return this._maxValue;
+  }
 
   constructor(public readonly bytesCount: number) {
     super();
-    if (!Number.isSafeInteger(bytesCount)) throw new Error("Bytes count is not integer");
-    if (bytesCount <= 0) throw new Error("Bytes count is not positive");
-    this.maxValue = 2n ** BigInt(bytesCount) - 1n;
+    if (!Number.isSafeInteger(bytesCount)) throw new Error('Bytes count is not integer');
+    if (bytesCount <= 0) throw new Error('Bytes count is not positive');
+    this._maxValue = 2n ** BigInt(bytesCount * 8) - 1n;
   }
 
   public appendToBytes(bytes: number[], input: Input): number[] {
@@ -26,8 +29,8 @@ export class BigUIntSerializer extends BaseSerializer<bigint, Input, Output> {
     return bytes;
   }
 
-  public read(buffer: Buffer, offset: number): { res: bigint; cursor: number; } {
-    if (buffer.length - offset < this.bytesCount) throw new Error("Unexpected end of buffer");
+  public read(buffer: Buffer, offset: number): { res: bigint; cursor: number } {
+    if (buffer.length - offset < this.bytesCount) throw new Error('Unexpected end of buffer');
     let result = 0n;
     const newOffset = offset + this.bytesCount;
     for (let cursor = offset; cursor < newOffset; cursor++) {
@@ -47,9 +50,9 @@ export class BigUIntSerializer extends BaseSerializer<bigint, Input, Output> {
   }
 
   private _toBase(input: Input): bigint {
-    if (typeof input !== "bigint") input = BigInt(input);
-    if (input < 0) throw new Error("Input is negative");
-    if (input > this.maxValue) throw new Error("Input overflow");
+    if (typeof input !== 'bigint') input = BigInt(input);
+    if (input < 0) throw new Error('Input is negative');
+    if (input > this._maxValue) throw new Error('Input overflow');
     return input;
   }
 }
