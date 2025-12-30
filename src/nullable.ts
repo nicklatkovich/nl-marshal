@@ -1,20 +1,43 @@
-// import { BaseSerializer } from './_base';
+import { BaseOf, BaseSerializer, InputOf, OutputOf } from './_base';
 
-// type Base<T extends BaseSerializer<any, any, any>> = T extends BaseSerializer<infer R, any, any> ? R | null : never;
+type Base<T extends BaseSerializer<any, any, any>> = BaseOf<T> | null;
+type Input<T extends BaseSerializer<any, any, any>> = InputOf<T> | null | undefined;
+type Output<T extends BaseSerializer<any, any, any>> = OutputOf<T> | null;
 
-// type Input<T extends BaseSerializer<any, any, any>> = T extends BaseSerializer<any, infer R, any>
-//   ? R | null | undefined
-//   : never;
+export class NullableSerializer<T extends BaseSerializer<any, any, any>> extends BaseSerializer<
+  Base<T>,
+  Input<T>,
+  Output<T>
+> {
+  constructor(public readonly type: T) {
+    super();
+  }
 
-// type Output<T extends BaseSerializer<any, any, any>> = T extends BaseSerializer<any, any, infer R> ? R | null : never;
+  public appendToBytes(bytes: number[], input: Input<T>): number[] {
+    if (input === null || input === undefined) {
+      bytes.push(0);
+      return bytes;
+    }
+    bytes.push(1);
+    return this.type.appendToBytes(bytes, input);
+  }
 
-// export class NullableSerializer<T extends BaseSerializer<any, any, any>> extends BaseSerializer<
-//   Base<T>,
-//   Input<T>,
-//   Output<T>
-// > {
-//   public appendToBytes(bytes: number[], input: Input): number[] {}
-//   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {}
-//   public toJSON(input: Input): Output {}
-//   public fromJSON(output: Output): Base {}
-// }
+  public read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number } {
+    const flag = buffer[offset];
+    offset += 1;
+    if (flag === 0) return { res: null, cursor: offset };
+    if (flag === 1) return this.type.read(buffer, offset);
+    throw new Error(`Invalid nullable flag value: ${flag}`);
+  }
+
+  public toJSON(input: Input<T>): Output<T> {
+    return input ?? null;
+  }
+
+  public fromJSON(output: Output<T>): Base<T> {
+    return output;
+  }
+}
+
+export const nullable = <T extends BaseSerializer<any, any, any>>(type: T): NullableSerializer<T> =>
+  new NullableSerializer(type);

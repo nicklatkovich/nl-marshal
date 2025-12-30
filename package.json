@@ -1,6 +1,6 @@
 {
   "name": "nl-marshal",
-  "version": "0.5.0-rc.0",
+  "version": "0.6.0",
   "description": "Simple NodeJS utility to serialize or deserialize JS objects to Buffer or JSON",
   "main": "lib/index.js",
   "scripts": {

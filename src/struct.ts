@@ -1,12 +1,12 @@
 import { BaseSerializer, BaseOf, InputOf, OutputOf } from './_base';
 
-type Difinition = { [key: string]: BaseSerializer<any, any, any> };
+export type StructDefinition = { [key: string]: BaseSerializer<any, any, any> };
 
-type Base<T extends Difinition> = { [key in keyof T]: BaseOf<T[key]> };
-type Input<T extends Difinition> = { [key in keyof T]: InputOf<T[key]> };
-type Output<T extends Difinition> = { [key in keyof T]: OutputOf<T[key]> };
+type Base<T extends StructDefinition> = { [key in keyof T]: BaseOf<T[key]> };
+type Input<T extends StructDefinition> = { [key in keyof T]: InputOf<T[key]> };
+type Output<T extends StructDefinition> = { [key in keyof T]: OutputOf<T[key]> };
 
-export class StructSerializer<T extends Difinition> extends BaseSerializer<Base<T>, Input<T>, Output<T>> {
+export class StructSerializer<T extends StructDefinition> extends BaseSerializer<Base<T>, Input<T>, Output<T>> {
   public readonly difinition: Readonly<T>;
   public get keys(): (keyof T)[] {
     return Object.keys(this.difinition);
@@ -50,4 +50,5 @@ export class StructSerializer<T extends Difinition> extends BaseSerializer<Base<
   }
 }
 
-export const struct = <T extends Difinition>(difinition: T): StructSerializer<T> => new StructSerializer(difinition);
+export const struct = <T extends StructDefinition>(difinition: T): StructSerializer<T> =>
+  new StructSerializer(difinition);

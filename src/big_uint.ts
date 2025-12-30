@@ -1,9 +1,10 @@
 import { BaseSerializer } from './_base';
 
+type Base = bigint;
 type Input = bigint | number | string;
 type Output = number | string;
 
-export class BigUIntSerializer extends BaseSerializer<bigint, Input, Output> {
+export class BigUIntSerializer extends BaseSerializer<Base, Input, Output> {
   private readonly _maxValue: bigint;
   public get maxValue(): bigint {
     return this._maxValue;
@@ -18,18 +19,10 @@ export class BigUIntSerializer extends BaseSerializer<bigint, Input, Output> {
 
   public appendToBytes(bytes: number[], input: Input): number[] {
     input = this._toBase(input);
-    const serialized = new Array<number>(this.bytesCount).fill(0);
-    let byteIndex = this.bytesCount - 1;
-    while (input > 0) {
-      serialized[byteIndex] = Number(input % 256n);
-      input /= 256n;
-      byteIndex--;
-    }
-    bytes.push(...serialized);
-    return bytes;
+    return this._appendToBytes(bytes, input);
   }
 
-  public read(buffer: Buffer, offset: number): { res: bigint; cursor: number } {
+  public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {
     if (buffer.length - offset < this.bytesCount) throw new Error('Unexpected end of buffer');
     let result = 0n;
     const newOffset = offset + this.bytesCount;
@@ -45,12 +38,24 @@ export class BigUIntSerializer extends BaseSerializer<bigint, Input, Output> {
     return Number(input);
   }
 
-  public fromJSON(output: Output): bigint {
+  public fromJSON(output: Output): Base {
     return this._toBase(output);
   }
 
-  private _toBase(input: Input): bigint {
-    if (typeof input !== 'bigint') input = BigInt(input);
+  protected _appendToBytes(bytes: number[], input: bigint): number[] {
+    const serialized = new Array<number>(this.bytesCount).fill(0);
+    let byteIndex = this.bytesCount - 1;
+    while (input > 0) {
+      serialized[byteIndex] = Number(input % 256n);
+      input /= 256n;
+      byteIndex--;
+    }
+    bytes.push(...serialized);
+    return bytes;
+  }
+
+  private _toBase(input: Input): Base {
+    input = BigInt(input);
     if (input < 0) throw new Error('Input is negative');
     if (input > this._maxValue) throw new Error('Input overflow');
     return input;
@@ -58,3 +63,5 @@ export class BigUIntSerializer extends BaseSerializer<bigint, Input, Output> {
 }
 
 export const big_uint_t = (bytesCount: number): BigUIntSerializer => new BigUIntSerializer(bytesCount);
+export const uint64 = big_uint_t(8);
+export const uint256 = big_uint_t(32);
