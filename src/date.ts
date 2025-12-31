@@ -13,7 +13,7 @@ export class DateSerializer extends BaseSerializer<Base, Input, Output> {
 
   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {
     const { res: timestamp, cursor } = safe_int.read(buffer, offset);
-    const res = new Date(Number(timestamp));
+    const res = new Date(timestamp);
     if (isNaN(res.getTime())) throw new Error(`date: invalid timestamp ${timestamp}`);
     return { res, cursor };
   }

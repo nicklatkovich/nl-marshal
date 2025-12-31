@@ -40,7 +40,7 @@ export class BytesSerializer extends BaseSerializer<Base, Input, Output> {
   }
 
   protected readWithSize(buffer: Buffer, offset: number, size: number): { res: Base; cursor: number } {
-    const slice = buffer.slice(offset, offset + size);
+    const slice = buffer.subarray(offset, offset + size);
     if (slice.length !== size) throw new Error(`bytes: invalid size, expected ${size}, got ${slice.length}`);
     return { res: slice, cursor: offset + size };
   }

@@ -17,8 +17,8 @@ export class BigIntSerializer extends BigUIntSerializer {
 
   constructor(bytesCount: number) {
     super(bytesCount);
-    this.base = 2n ** BigInt(bytesCount * 8 - 1);
-    this.maxTwosComplement = 2n ** BigInt(bytesCount * 8) - 1n;
+    this.base = 1n << BigInt(bytesCount * 8 - 1);
+    this.maxTwosComplement = (1n << BigInt(bytesCount * 8)) - 1n;
     this.minSignedValue = -this.base;
     this.maxSignedValue = this.base - 1n;
   }
