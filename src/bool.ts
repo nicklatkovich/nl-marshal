@@ -5,9 +5,8 @@ type Input = boolean;
 type Output = boolean;
 
 export class BoolSerializer extends BaseSerializer<Base, Input, Output> {
-  public appendToBytes(bytes: number[], input: Input): number[] {
-    bytes.push(input ? 1 : 0);
-    return bytes;
+  public genOp(input: Input): BaseSerializer.Op {
+    return { length: 1, fn: (buffer, offset) => (buffer[offset] = input ? 1 : 0) };
   }
 
   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {

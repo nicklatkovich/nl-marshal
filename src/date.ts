@@ -6,9 +6,9 @@ type Input = Date | string | number;
 type Output = string;
 
 export class DateSerializer extends BaseSerializer<Base, Input, Output> {
-  public appendToBytes(bytes: number[], input: Input): number[] {
+  public genOp(input: Input): BaseSerializer.Op {
     const date = this._toBase(input);
-    return safe_int.appendToBytes(bytes, date.getTime());
+    return safe_int.genOp(date.getTime());
   }
 
   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {
@@ -28,10 +28,9 @@ export class DateSerializer extends BaseSerializer<Base, Input, Output> {
   }
 
   private _toBase(input: Input): Base {
-    if (input instanceof Date) return input;
-    const result = new Date(input);
-    if (isNaN(result.getTime())) throw new Error(`date: invalid date ${input}`);
-    return result;
+    input = new Date(input);
+    if (isNaN(input.getTime())) throw new Error(`date: invalid date ${input}`);
+    return input;
   }
 }
 

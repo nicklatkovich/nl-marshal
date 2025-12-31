@@ -17,9 +17,9 @@ export class BigUIntSerializer extends BaseSerializer<Base, Input, Output> {
     this._maxValue = (1n << BigInt(bytesCount * 8)) - 1n;
   }
 
-  public appendToBytes(bytes: number[], input: Input): number[] {
+  public genOp(input: Input): BaseSerializer.Op {
     input = this._toBase(input);
-    return this._appendToBytes(bytes, input);
+    return this._genOp(input);
   }
 
   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {
@@ -42,16 +42,16 @@ export class BigUIntSerializer extends BaseSerializer<Base, Input, Output> {
     return this._toBase(output);
   }
 
-  protected _appendToBytes(bytes: number[], input: bigint): number[] {
-    const serialized = new Array<number>(this.bytesCount).fill(0);
-    let byteIndex = this.bytesCount - 1;
-    while (input > 0) {
-      serialized[byteIndex] = Number(input & 0xffn);
-      input >>= 8n;
-      byteIndex -= 1;
-    }
-    bytes.push(...serialized);
-    return bytes;
+  protected _genOp(input: bigint): BaseSerializer.Op {
+    return {
+      length: this.bytesCount,
+      fn: (buffer, offset) => {
+        for (let i = offset + this.bytesCount - 1; i >= offset; i--) {
+          buffer[i] = Number(input & 0xffn);
+          input >>= 8n;
+        }
+      },
+    };
   }
 
   private _toBase(input: Input): Base {

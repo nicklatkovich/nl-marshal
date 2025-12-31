@@ -32,11 +32,18 @@ export class VariantSerializer<T extends BaseTypeMap> extends BaseSerializer<Bas
     super();
   }
 
-  public appendToBytes(bytes: number[], input: Input<T> | Base<T>): number[] {
-    varuint.appendToBytes(bytes, input[0]);
+  public genOp(input: Input<T> | Base<T>): BaseSerializer.Op {
     const serializer = (this.types as BaseTypeMap)[input[0]];
     if (!serializer) throw new Error(`variant: unknown type ${input[0]}`);
-    return serializer.appendToBytes(bytes, input[1]);
+    const typeOp = varuint.genOp(input[0]);
+    const innerOp = serializer.genOp(input[1]);
+    return {
+      length: typeOp.length + innerOp.length,
+      fn: (buffer, offset) => {
+        typeOp.fn(buffer, offset);
+        innerOp.fn(buffer, offset + typeOp.length);
+      },
+    };
   }
 
   public read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number } {

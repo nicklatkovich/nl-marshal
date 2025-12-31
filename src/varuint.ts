@@ -11,19 +11,30 @@ function _toBase(input: Input): bigint {
 }
 
 export class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
-  public appendToBytes(bytes: number[], input: Input): number[] {
+  public genOp(input: Input): BaseSerializer.Op {
     input = _toBase(input);
-    let isLastByte = true;
-    const result: number[] = [];
-    do {
-      const mod = Number(input & 0x7fn);
-      input >>= 7n;
-      const byte = isLastByte ? mod + 128 : mod;
-      isLastByte = false;
-      result.push(byte);
-    } while (input >= 1);
-    bytes.push(...result.reverse());
-    return bytes;
+    const length = this.calculateLength(input);
+    return {
+      length,
+      fn: (buffer, offset) => {
+        let lb = offset + length - 1;
+        let value = input;
+        {
+          const mod = Number(value & 0x7fn);
+          value >>= 7n;
+          const byte = mod + 128;
+          buffer[lb] = byte;
+          lb -= 1;
+        }
+        while (value > 0) {
+          const mod = Number(value & 0x7fn);
+          value >>= 7n;
+          const byte = mod;
+          buffer[lb] = byte;
+          lb -= 1;
+        }
+      },
+    };
   }
 
   public read(buffer: Buffer, offset: number): { res: bigint; cursor: number } {
@@ -45,6 +56,15 @@ export class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
 
   public fromJSON(input: Input): bigint {
     return _toBase(input);
+  }
+
+  private calculateLength(input: bigint): number {
+    let length = 0;
+    do {
+      length += 1;
+      input >>= 7n;
+    } while (input > 0);
+    return length;
   }
 }
 
