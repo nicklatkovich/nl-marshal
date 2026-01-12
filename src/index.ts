@@ -1,7 +1,7 @@
 export { BigNumber } from "bignumber.js";
 
 export { default as bool } from "./bool";
-export { default as bytes, Encoding } from "./bytes";
+export { default as bytes, Encoding, BytesSerializer } from "./bytes";
 export { default as nil } from "./nil";
 export { default as ISerializer, BaseOf, InputOf, JSONOf } from "./ISerializer";
 export { default as optional, OptionalSerializer } from "./optional";
