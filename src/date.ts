@@ -1,20 +1,18 @@
 import { BaseSerializer } from './_base';
-import { big_int_t } from './big_int';
+import { safe_int } from './safe_integer';
 
 type Base = Date;
 type Input = Date | string | number;
 type Output = string;
 
-const int56_t = big_int_t(7);
-
 export class DateSerializer extends BaseSerializer<Base, Input, Output> {
   public appendToBytes(bytes: number[], input: Input): number[] {
     const date = this._toBase(input);
-    return int56_t.appendToBytes(bytes, date.getTime());
+    return safe_int.appendToBytes(bytes, date.getTime());
   }
 
   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {
-    const { res: timestamp, cursor } = int56_t.read(buffer, offset);
+    const { res: timestamp, cursor } = safe_int.read(buffer, offset);
     const res = new Date(Number(timestamp));
     if (isNaN(res.getTime())) throw new Error(`date: invalid timestamp ${timestamp}`);
     return { res, cursor };

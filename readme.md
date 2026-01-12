@@ -1,137 +1,150 @@
 # NL-Marshal
 
-Simple NodeJS utility to serialize or deserialize JS objects to Buffer or JSON.
+Simple Node.js utility to serialize or deserialize JS objects to Buffer or JSON.
 
-## Serializers
+## Features
 
-### Boolean
+- Serialize and deserialize JavaScript objects to/from Buffer or JSON
+- Supports various data types: integers, big integers, booleans, bytes, dates, sets, structs, variants, vectors, and more
+- Customizable and composable serializers
+- Useful for binary protocols, storage, and network communication
 
-Serialized buffer is `0x01` if serialized value is `true` and `0x00` otherwise.
+## Installation
 
-```ts
-import { bool } from "nl-marshal";
-console.log(bool.toJSON(true)); // true
-console.log(bool.fromJSON(false)); // false
-const buffer = bool.toBuffer(true);
-console.log(buffer); // 0x01
-console.log(bool.toBuffer(false)); // 0x00
-console.log(bool.fromBuffer(buffer)); // true
+```bash
+npm install nl-marshal
 ```
 
-### Empty
+or using yarn:
 
-Serialized buffer is always empty. In JSON representation `null` will be used.
-
-```ts
-import { empty } from "nl-marshal";
-console.log(empty.toJSON(undefined)); // null
-console.log(empty.toJSON(null)); // null
-console.log(empty.fromJSON(null)); // null
-console.log(empty.toBuffer(undefined)); // <Buffer >
-console.log(empty.toBuffer(null)); // <Buffer >
-console.log(empty.fromBuffer(Buffer.from([]))); // null
+```bash
+yarn add nl-marshal
 ```
 
-### Optional
+## Usage Example
 
-Used to serialize optional values. Serialized buffer contains bool-byte at the start to show, value provided or not.
-In JSON representation returns `null` if no value provided.
+```typescript
+import { int32_t, bool, vector, struct } from 'nl-marshal';
 
-```ts
-import { optional, bool } from "nl-marshal";
-const serializer = optional(bool);
-console.log(serializer.toJSON(true)); // true
-console.log(serializer.toJSON(undefined)); // null
-console.log(serializer.toJSON(null)); // null
-console.log(serializer.fromJSON(false)); // false
-console.log(serializer.fromJSON(null)); // null
-console.log(serializer.toBuffer(true)); // <Buffer 01 01>
-console.log(serializer.toBuffer(undefined)); // <Buffer 00>
-console.log(serializer.fromBuffer(Buffer.from("0100", "hex"))); // false
-console.log(serializer.fromBuffer(Buffer.from([0]))); // null
+// Define a struct serializer
+const userSerializer = struct({
+  id: int32_t,
+  active: bool,
+  scores: vector(int32_t),
+});
+
+const user = { id: 42, active: true, scores: [10, 20, 30] };
+
+// Serialize to Buffer
+const buffer = userSerializer.serialize(user);
+
+// Deserialize from Buffer
+const parsed = userSerializer.parse(buffer);
 ```
 
-### String
+## API Overview
 
-Serialized buffer contains length of string as [`varuint`](#varuint) and utf-8 string.
+### Built-in Serializers
 
-```ts
-import { string } from "nl-marshal";
-console.log(string.toJSON("qwe")); // "qwe"
-console.log(string.fromJSON("qwe")); // "qwe"
-console.log(string.toBuffer("qwe")); // <Buffer 83 71 77 65>
-console.log(string.fromBuffer(Buffer.from("83717765", "hex"))); // "qwe"
+- **[bool](#bool-example)**: Boolean values
+- **[int8_t, int16_t, int32_t, int64_t](#integer-examples)**: Signed integers
+- **[uint8_t, uint16_t, uint32_t, uint64_t](#integer-examples)**: Unsigned integers
+- **[big_int, big_uint](#bigint-example)**: Arbitrary-size integers
+- **[varuint](#varuint-example)**: Variable-length unsigned integer
+- **[bytes](#bytes-example)**: Buffer, Uint8Array, or string (with encoding)
+- **[date](#date-example)**: JavaScript Date objects
+- **[set](#set-example)**: Set collections
+- **[vector](#vector-example)**: Arrays of any serializer
+- **[struct](#struct-example)**: Object with named fields
+- **[variant](#variant-example)**: Tagged union types
+
+---
+
+## Serializer Examples
+
+### Bool Example
+```typescript
+import { bool } from 'nl-marshal';
+const buffer = bool.serialize(true); // <Buffer 01>
+const value = bool.parse(buffer); // true
 ```
 
-### Struct
-
-```ts
-import { struct, bool, string } from "nl-marshal";
-const serializer = struct({ b: bool, s: string });
-console.log(serializer.toJSON({ b: true, s: "qwe" }));
-// { b: true, s: "qwe" }
-console.log(serializer.fromJSON({ s: "qwe", b: true }));
-// { b: true, s: "qwe" }
-console.log(serializer.toBuffer({ s: "qwe", b: true }));
-// <Buffer 01 83 71 77 65>
-console.log(serializer.fromBuffer(Buffer.from("0183717765", "hex")));
-// { b: true, s: "qwe" }
+### Integer Examples
+```typescript
+import { int32_t, uint16_t } from 'nl-marshal';
+const buf1 = int32_t.serialize(-123); // <Buffer ff ff ff 85>
+const val1 = int32_t.parse(buf1); // -123n
+const buf2 = uint16_t.serialize(500); // <Buffer 01 f4>
+const val2 = uint16_t.parse(buf2); // 500n
 ```
 
-### Varuint
+### BigInt Example
+You can create big integer serializers with a specified byte size.
 
-Serializer for unsigned integers of unknown size. Serialized value can be `string`, `number` or `BigNumber`.
-
-```ts
-import { varuint, BigNumber } from "nl-marshal";
-console.log(varuint.toJSON(123));
-// 123
-console.log(varuint.toJSON("123"));
-// 123
-console.log(varuint.toJSON(new BigNumber(123456789123456789)));
-// "123456789123456789"
-console.log(varuint.fromJSON("123"));
-// <BigNumber 123>
-console.log(varuint.toBuffer(123));
-// <Buffer fb>
-console.log(varuint.fromBuffer(Buffer.from("fb", "hex")));
-// <BigNumber 123>
+```typescript
+import { big_int_t } from 'nl-marshal';
+const buf = big_int_t(8).serialize(1234567890123456789n);
+const val = big_int_t(8).parse(buf);
 ```
 
-### UFixed
-
-Serializer for unsigned fixed point numbers. Serialized value can be `string`, `number` or `BigNumber`.
-First argument is decimal places. The second one is boolean `round`, default is `true`.
-
-```ts
-import { ufixed, BigNumber } from "nl-marshal";
-console.log(ufixed(4).toJSON(123.45678));
-// 123.45678
-console.log(ufixed(4).toJSON("123.45678"));
-// 123.45678
-console.log(ufixed(4).toJSON(new BigNumber("123456789123456789.987654321")));
-// "123456789123456789.9877"
-console.log(ufixed(4).fromJSON("123.456789"));
-// <BigNumber 123.456789>
-console.log(ufixed(4).toBuffer(123.456789));
-// <Buffer 4b 2d 88>
-console.log(ufixed(4).fromBuffer(Buffer.from("4b2d88", "hex")));
-// <BigNumber 123.4568>
+### VarUInt Example
+```typescript
+import { varuint } from 'nl-marshal';
+const buf = varuint.serialize(300);
+const val = varuint.parse(buf); // 300n
 ```
 
-### Vector
-
-Serializer for vector of static type. Serialized buffer starts with length of value as [`varuint`](#varuint)
-
-```ts
-import { vector, varuint, BigNumber } from "nl-marshal";
-const serializer = vector(varuint);
-console.log(serializer.toJSON([123, "234", new BigNumber(345)]));
-// ["123", "234", "345"]
-console.log(serializer.fromJSON(["123", "234", "345"]));
-// [<BigNumber 123>, <BigNumber 234>, <BigNumber 345>]
-console.log(serializer.toBuffer([123, "234", new BigNumber(345)]));
-// <Buffer 83 fb 01 ea 02 d9>
-console.log(serializer.fromBuffer(Buffer.from("83fb01ea02d9", "hex")));
-// [<BigNumber 123>, <BigNumber 234>, <BigNumber 345>]
+### Bytes Example
+```typescript
+import { bytes } from 'nl-marshal';
+const buf = bytes.serialize('hello');
+const str = bytes.parse(buf).toString(); // 'hello'
 ```
+
+### Date Example
+```typescript
+import { date } from 'nl-marshal';
+const now = new Date();
+const buf = date.serialize(now);
+const parsed = date.parse(buf); // Date object
+```
+
+### Set Example
+```typescript
+import { set, int32_t } from 'nl-marshal';
+const setSer = set(int32_t);
+const buf = setSer.serialize(new Set([1, 2, 3]));
+const parsed = setSer.parse(buf); // Set {1, 2, 3}
+```
+
+### Vector Example
+```typescript
+import { vector, bool } from 'nl-marshal';
+const vecSer = vector(bool);
+const buf = vecSer.serialize([true, false, true]);
+const arr = vecSer.parse(buf); // [true, false, true]
+```
+
+### Struct Example
+```typescript
+import { struct, int32_t, bool } from 'nl-marshal';
+const userSer = struct({ id: int32_t, active: bool });
+const buf = userSer.serialize({ id: 1, active: false });
+const obj = userSer.parse(buf); // { id: 1, active: false }
+```
+
+### Variant Example
+```typescript
+import { variant, int32_t, bool } from 'nl-marshal';
+const varSer = variant({ 0: int32_t, 1: bool });
+const buf = varSer.serialize([1, true]);
+const val = varSer.parse(buf); // [1, true]
+```
+
+### Creating Custom Serializers
+
+TODO: Add example of creating custom serializers using the base serializer.
+
+## License
+
+MIT
