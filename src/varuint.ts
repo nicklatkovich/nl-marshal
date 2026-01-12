@@ -16,7 +16,7 @@ export class VarUIntSerializer extends BaseSerializer<bigint, Input, Output> {
     let isLastByte = true;
     const result: number[] = [];
     do {
-      const mod = Number(input && 0x7fn);
+      const mod = Number(input & 0x7fn);
       input >>= 7n;
       const byte = isLastByte ? mod + 128 : mod;
       isLastByte = false;

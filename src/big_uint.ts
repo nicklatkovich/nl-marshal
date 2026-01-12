@@ -14,7 +14,7 @@ export class BigUIntSerializer extends BaseSerializer<Base, Input, Output> {
     super();
     if (!Number.isSafeInteger(bytesCount)) throw new Error('Bytes count is not integer');
     if (bytesCount <= 0) throw new Error('Bytes count is not positive');
-    this._maxValue = 2n ** BigInt(bytesCount * 8) - 1n;
+    this._maxValue = (1n << BigInt(bytesCount * 8)) - 1n;
   }
 
   public appendToBytes(bytes: number[], input: Input): number[] {
@@ -27,7 +27,7 @@ export class BigUIntSerializer extends BaseSerializer<Base, Input, Output> {
     let result = 0n;
     const newOffset = offset + this.bytesCount;
     for (let cursor = offset; cursor < newOffset; cursor++) {
-      result = result * 256n + BigInt(buffer[cursor]);
+      result = (result << 8n) + BigInt(buffer[cursor]);
     }
     return { res: result, cursor: newOffset };
   }
@@ -46,9 +46,9 @@ export class BigUIntSerializer extends BaseSerializer<Base, Input, Output> {
     const serialized = new Array<number>(this.bytesCount).fill(0);
     let byteIndex = this.bytesCount - 1;
     while (input > 0) {
-      serialized[byteIndex] = Number(input % 256n);
-      input /= 256n;
-      byteIndex--;
+      serialized[byteIndex] = Number(input & 0xffn);
+      input >>= 8n;
+      byteIndex -= 1;
     }
     bytes.push(...serialized);
     return bytes;

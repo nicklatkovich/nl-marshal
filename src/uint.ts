@@ -46,10 +46,10 @@ export class UIntSerializer extends BaseSerializer<Base, Input, Output> {
   }
 
   protected _appendToBytes(bytes: number[], input: number): number[] {
-    const serialized = [];
+    const serialized = new Array<number>(this.bytesCount).fill(0);
     for (let i = 0; i < this.bytesCount; i++) {
-      serialized.push(input & 0xff);
-      input >>= 8;
+      serialized[i] = input & 0xff;
+      input /= 256;
     }
     bytes.push(...serialized.reverse());
     return bytes;
