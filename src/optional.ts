@@ -1,36 +1,31 @@
 import bool from "./bool";
-import ISerializer, { InputOf, OutputOf, JSONOutputOf } from "./ISerializer";
+import ISerializer, { BaseOf, InputOf, JSONOf } from "./ISerializer";
 
-type TInput<T> = InputOf<T> | null | undefined;
-type TOutput<T> = OutputOf<T> | null;
-type TJSONOutput<T> = JSONOutputOf<T> | null;
+type Base<T> = BaseOf<T> | null;
+type Input<T> = InputOf<T> | null | undefined;
+type JSON<T> = JSONOf<T> | null;
 
-export class OptionalSerializer<T extends ISerializer> extends ISerializer<TInput<T>, TOutput<T>, TJSONOutput<T>> {
+export class OptionalSerializer<T extends ISerializer> extends ISerializer<Base<T>, Input<T>, JSON<T>> {
 	constructor(public readonly serializer: T) { super(); }
-
-	toJSON(value: TInput<T>): TJSONOutput<T> {
+	toJSON(value: Input<T>): JSON<T> {
 		if (value === null || value === undefined) return null;
 		return this.serializer.toJSON(value);
 	}
-
-	fromJSON(value: TJSONOutput<T>): TOutput<T> {
+	fromJSON(value: JSON<T>): Base<T> {
 		if (value === null) return null;
 		return this.serializer.toJSON(value);
 	}
-
-	toBuffer(value: TInput<T>): Buffer {
+	toBuffer(value: Input<T>): Buffer {
 		const missing = value === null || value === undefined;
 		const preres = bool.toBuffer(!missing);
 		if (missing) return preres;
 		return Buffer.concat([preres, this.serializer.toBuffer(value)]);
 	}
-
-	readFromBuffer(buffer: Buffer, offset: number = 0): { res: TOutput<T>, newOffset: number } {
+	readFromBuffer(buffer: Buffer, offset: number = 0): { res: Base<T>, newOffset: number } {
 		const { res: provided, newOffset: from } = bool.readFromBuffer(buffer, offset);
 		if (!provided) return { res: null, newOffset: from };
 		return this.serializer.readFromBuffer(buffer, from);
 	}
-
 }
 
 export default function optional<T extends ISerializer>(serializer: T): OptionalSerializer<T> {

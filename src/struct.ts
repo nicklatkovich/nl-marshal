@@ -1,12 +1,12 @@
-import ISerializer, { InputOf, OutputOf, JSONOutputOf } from "./ISerializer";
+import ISerializer, { InputOf, BaseOf, JSONOf } from "./ISerializer";
 
 type SerializersMap = { [key: string]: ISerializer };
 
-type TInput<T extends SerializersMap> = { [key in keyof T]: InputOf<T[key]> };
-type TOutput<T extends SerializersMap> = { [key in keyof T]: OutputOf<T[key]> };
-type TJSONOutput<T extends SerializersMap> = { [key in keyof T]: JSONOutputOf<T[key]> };
+type Base<T extends SerializersMap> = { [key in keyof T]: BaseOf<T[key]> };
+type Input<T extends SerializersMap> = { [key in keyof T]: InputOf<T[key]> };
+type JSON<T extends SerializersMap> = { [key in keyof T]: JSONOf<T[key]> };
 
-export class StructSerializer<T extends SerializersMap> extends ISerializer<TInput<T>, TOutput<T>, TJSONOutput<T>> {
+export class StructSerializer<T extends SerializersMap> extends ISerializer<Base<T>, Input<T>, JSON<T>> {
 	public readonly serializers: Readonly<T>;
 	public get keys(): (keyof T)[] { return Object.keys(this.serializers); }
 	constructor(serializers: T) {
@@ -16,33 +16,29 @@ export class StructSerializer<T extends SerializersMap> extends ISerializer<TInp
 			return acc;
 		}, {} as Partial<T>) as Readonly<T>;
 	}
-
-	toJSON(value: TInput<T>): TJSONOutput<T> {
-		return this.keys.reduce((acc, key) => {
+	toJSON(value: Input<T>): JSON<T> {
+		return this.keys.reduce<Partial<JSON<T>>>((acc, key) => {
 			acc[key] = this.serializers[key].toJSON(value[key]);
 			return acc;
-		}, {} as Partial<TJSONOutput<T>>) as TJSONOutput<T>
+		}, {}) as JSON<T>
 	}
-
-	fromJSON(value: TJSONOutput<T>): TOutput<T> {
-		return this.keys.reduce((acc, key) => {
+	fromJSON(value: JSON<T>): Base<T> {
+		return this.keys.reduce<Partial<Base<T>>>((acc, key) => {
 			acc[key] = this.serializers[key].fromJSON(value[key]);
 			return acc;
-		}, {} as Partial<TOutput<T>>) as TOutput<T>;
+		}, {}) as Base<T>;
 	}
-
-	toBuffer(value: TInput<T>): Buffer {
+	toBuffer(value: Input<T>): Buffer {
 		return Buffer.concat(this.keys.map((key) => this.serializers[key].toBuffer(value[key])));
 	}
-
-	readFromBuffer(buffer: Buffer, offset: number = 0): { res: TOutput<T>, newOffset: number } {
-		const result: Partial<TOutput<T>> = {};
+	readFromBuffer(buffer: Buffer, offset: number = 0): { res: Base<T>, newOffset: number } {
+		const result: Partial<Base<T>> = {};
 		for (const key of this.keys) {
 			const { res: value, newOffset: nextOffset } = this.serializers[key].readFromBuffer(buffer, offset);
 			result[key] = value;
 			offset = nextOffset;
 		}
-		return { res: result as TOutput<T>, newOffset: offset };
+		return { res: result as Base<T>, newOffset: offset };
 	}
 }
 
