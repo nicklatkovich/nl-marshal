@@ -1,51 +1,59 @@
-import { ok } from "assert";
-import ISerializer, { BaseOf, JSONOf, InputOf } from "./ISerializer";
-import varuint from "./varuint";
+import { BaseOf, BaseSerializer, InputOf, OutputOf, Serializer } from "./_base";
+import { vector, VectorSerializer } from "./vector";
 
-type Base<T extends ISerializer> = Set<BaseOf<T>>;
-type Input<T extends ISerializer> = Set<InputOf<T> | BaseOf<T>> | (InputOf<T> | BaseOf<T>)[];
-type JSON<T extends ISerializer> = JSONOf<T>[];
+type Base<T extends Serializer> = Set<BaseOf<T>>;
+type Input<T extends Serializer> = Set<InputOf<T>> | InputOf<T>[];
+type Output<T extends Serializer> = OutputOf<T>[];
 
-export class SetSerializer<T extends ISerializer> extends ISerializer<Base<T>, Input<T>, JSON<T>> {
-	constructor(public readonly serializer: T) { super(); }
-	public toJSON(value: Input<T>): JSON<T> {
-		if (value instanceof Set) value = [...value];
-		this.checkForDuplicates(value);
-		return value.map((e) => this.serializer.toJSON(e));
-	}
-	public fromJSON(value: JSON<T>): Base<T> {
-		const preres: BaseOf<T>[] = value.map((e) => this.serializer.fromJSON(e));
-		this.checkForDuplicates(preres);
-		return new Set(preres);
-	}
-	public toBuffer(value: Input<T>): Buffer {
-		if (value instanceof Set) value = [...value];
-		return Buffer.concat([varuint.toBuffer(value.length), ...value.map((e) => this.serializer.toBuffer(e))]);
-	}
-	public readFromBuffer(buffer: Buffer, offset: number = 0): { res: Base<T>; newOffset: number; } {
-		const { res: lengthBN, newOffset: from } = varuint.readFromBuffer(buffer, offset);
-		ok(lengthBN.lte(Number.MAX_SAFE_INTEGER), "set size overflow");
-		const length = lengthBN.toNumber();
-		let it = from;
-		const res: Base<T> = new Set();
-		for (let i = 0; i < length; i += 1) {
-			const { res: e, newOffset } = this.serializer.readFromBuffer(buffer, it);
-			it = newOffset;
-			res.add(e);
-		}
-		return { res, newOffset: it };
-	}
-	public checkForDuplicates(value: (InputOf<T> | BaseOf<T>)[]): void {
-		const serializedElements = value.map((element) => ({
-			element,
-			serializedHex: this.serializer.toBuffer(element).toString("hex"),
-		}));
-		const serializedHexes = new Set(serializedElements.map((e) => e.serializedHex));
-		const hasDuplicates = serializedElements.length !== serializedHexes.size;
-		if (hasDuplicates) throw new Error("set has duplicates");
-	}
+export class SetSerializer<T extends Serializer> extends BaseSerializer<Base<T>, Input<T>, Output<T>> {
+  public readonly vector: VectorSerializer<T>;
+
+  constructor(public readonly type: T) {
+    super();
+    this.vector = vector(type);
+  }
+
+  appendToBytes(bytes: number[], input: Input<T>): number[] {
+    const list = this.toList(input);
+    return this.vector.appendToBytes(bytes, list.map((e) => e.element));
+  }
+
+  read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number; } {
+    const { res, cursor } = this.vector.read(buffer, offset);
+    this.validateBaseList(res);
+    return { res: new Set(res), cursor };
+  }
+
+  toJSON(input: Input<T>): Output<T> {
+    return this.toList(input).map((e) => this.type.toJSON(e.element));
+  }
+
+  fromJSON(output: Output<T>): Base<T> {
+    const list = this.vector.fromJSON(output);
+    this.validateBaseList(list);
+    return new Set(list);
+  }
+
+  private toList(input: Input<T>): { element: InputOf<T>; serialized: number[] }[] {
+    const list = Array.isArray(input) ? input : [...input];
+    const sorted = list.map((e) => ({ element: e, serialized: this.type.appendToBytes([], e) }));
+    sorted.sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+    for (let i = 0, nextI = 1; nextI < sorted.length; i = nextI++) {
+      const a = sorted[i].serialized;
+      const b = sorted[nextI].serialized;
+      if (a < b || a > b) continue;
+      throw new Error("set: items duplicate");
+    }
+    return sorted;
+  }
+
+  private validateBaseList(base: BaseOf<T>[]): void {
+    const serialized = base.map((e) => this.type.appendToBytes([], e));
+    for (let i = 0, nextI = 1; nextI < serialized.length; i = nextI++) {
+      if (serialized[i] < serialized[nextI]) continue;
+      throw new Error(serialized[i] > serialized[nextI] ? "set: not sorted" : "set: items duplicate");
+    }
+  }
 }
 
-export default function set<T extends ISerializer>(serializer: T): SetSerializer<T> {
-	return new SetSerializer(serializer);
-}
+export const set = <T extends Serializer>(type: T): SetSerializer<T> => new SetSerializer(type);

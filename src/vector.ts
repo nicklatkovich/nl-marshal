@@ -1,33 +1,39 @@
-import ISerializer, { BaseOf, InputOf, JSONOf } from "./ISerializer";
-import varuint from "./varuint";
+import { BaseSerializer, BaseOf, InputOf, OutputOf, Serializer } from "./_base";
+import { varuint } from "./varuint";
 
-type Base<T extends ISerializer> = BaseOf<T>[];
-type Input<T extends ISerializer> = InputOf<T>[];
-type JSON<T extends ISerializer> = JSONOf<T>[];
+type Base<T extends Serializer> = BaseOf<T>[];
+type Input<T extends Serializer> = InputOf<T>[];
+type Output<T extends Serializer> = OutputOf<T>[];
 
-export class VectorSerializer<T extends ISerializer> extends ISerializer<Base<T>, Input<T>, JSON<T>> {
-	constructor(public readonly serializer: T) { super(); }
-	toJSON(value: Input<T>): JSON<T> { return value.map((element) => this.serializer.toJSON(element)); }
-	fromJSON(value: JSON<T>): Base<T> { return value.map((element) => this.serializer.fromJSON(element)); }
-	toBuffer(value: Input<T>): Buffer {
-		return Buffer.concat([
-			varuint.toBuffer(value.length),
-			...value.map((element) => this.serializer.toBuffer(element)),
-		]);
-	}
-	readFromBuffer(buffer: Buffer, offset: number = 0): { res: Base<T>, newOffset: number } {
-		const { res: length, newOffset: from } = varuint.readFromBuffer(buffer, offset);
-		let it = from;
-		if (length.gt(Number.MAX_SAFE_INTEGER)) throw new Error('unprocessable vector length');
-		const res = new Array(length.toNumber()).fill(null).map(() => {
-			const { res: element, newOffset } = this.serializer.readFromBuffer(buffer, it);
-			it = newOffset;
-			return element;
-		});
-		return { res, newOffset: it };
-	}
+export class VectorSerializer<T extends Serializer> extends BaseSerializer<Base<T>, Input<T>, Output<T>> {
+  constructor(public readonly type: T) {
+    super();
+  }
+
+  appendToBytes(bytes: number[], input: Input<T>): number[] {
+    bytes = varuint.appendToBytes(bytes, input.length);
+    for (const e of input) bytes = this.type.appendToBytes(bytes, e);
+    return bytes;
+  }
+
+  read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number; } {
+    const { res: length, cursor: lengthOffset } = varuint.read(buffer, offset);
+    let cursor = lengthOffset;
+    const res = new Array(Number(length)).fill(null).map(() => {
+      const { res: element, cursor: newCursor } = this.type.read(buffer, cursor);
+      cursor = newCursor;
+      return element as BaseOf<T>;
+    });
+    return { res, cursor };
+  }
+
+  toJSON(input: Input<T>): Output<T> {
+    return input.map((e) => this.type.toJSON(e));
+  }
+
+  fromJSON(output: OutputOf<T>[]): BaseOf<T>[] {
+    return output.map((e) => this.type.fromJSON(e));
+  }
 }
 
-export default function vector<T extends ISerializer>(serializer: T): VectorSerializer<T> {
-	return new VectorSerializer(serializer);
-}
+export const vector = <T extends Serializer>(type: T): VectorSerializer<T> => new VectorSerializer(type);
