@@ -10,3 +10,4 @@ export { default as set, SetSerializer } from "./set";
 export { default as struct, StructSerializer, extended } from "./struct";
 export { default as varuint } from "./varuint";
 export { default as vector, VectorSerializer } from "./vector";
+export { ufixed } from "./ufixed";

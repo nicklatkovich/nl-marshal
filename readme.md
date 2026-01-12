@@ -72,12 +72,37 @@ console.log(serializer.fromBuffer(Buffer.from('0183717765', 'hex')));
 Serializer for unsigned integers of unknown size. Serialized value can be `string`, `number` or `BigNumber`.
 ```ts
 import { varuint, BigNumber } from "nl-marshal";
-console.log(varuint.toJSON(new BigNumber(123))); // "123"
-console.log(varuint.toJSON(123)); // "123"
-console.log(varuint.toJSON('123')); // "123"
-console.log(varuint.fromJSON('123')); // <BigNumber 123>
-console.log(varuint.toBuffer(123)); // <Buffer fb>
-console.log(varuint.fromBuffer(Buffer.from('fb', 'hex'))); // <BigNumber 123>
+console.log(varuint.toJSON(123));
+// 123
+console.log(varuint.toJSON('123'));
+// 123
+console.log(varuint.toJSON(new BigNumber(123456789123456789)));
+// "123456789123456789"
+console.log(varuint.fromJSON('123'));
+// <BigNumber 123>
+console.log(varuint.toBuffer(123));
+// <Buffer fb>
+console.log(varuint.fromBuffer(Buffer.from('fb', 'hex')));
+// <BigNumber 123>
+```
+
+### UFixed
+Serializer for unsigned fixed point numbers. Serialized value can be `string`, `number` or `BigNumber`.
+First argument is decimal places. The second one is boolean `round`, default is `true`.
+```ts
+import { ufixed, BigNumber } from "nl-marshal";
+console.log(ufixed(4).toJSON(123.45678));
+// 123.45678
+console.log(ufixed(4).toJSON('123.45678'));
+// 123.45678
+console.log(ufixed(4).toJSON(new BigNumber('123456789123456789.987654321')));
+// "123456789123456789.9877"
+console.log(ufixed(4).fromJSON('123.456789'));
+// <BigNumber 123.456789>
+console.log(ufixed(4).toBuffer(123.456789));
+// <Buffer 4b 2d 88>
+console.log(ufixed(4).fromBuffer(Buffer.from('4b2d88', 'hex')));
+// <BigNumber 123.4568>
 ```
 
 ### Vector
