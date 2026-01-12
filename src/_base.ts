@@ -1,11 +1,18 @@
+export namespace BaseSerializer {
+  export type Op = { length: number; fn: (buffer: Buffer, offset: number) => unknown };
+}
+
 export abstract class BaseSerializer<Base extends Input, Input, Output> {
-  public abstract appendToBytes(bytes: number[], input: Input): number[];
+  public abstract genOp(input: Input): BaseSerializer.Op;
   public abstract read(buffer: Buffer, offset: number): { res: Base; cursor: number };
   public abstract toJSON(input: Input): Output;
   public abstract fromJSON(output: Output): Base;
 
-  public serialize(input: Input): Buffer {
-    return Buffer.from(this.appendToBytes([], input));
+  public serialize(input: Input, safeAlloc = false): Buffer {
+    const { length, fn } = this.genOp(input);
+    const buffer = safeAlloc ? Buffer.alloc(length) : Buffer.allocUnsafe(length);
+    fn(buffer, 0);
+    return buffer;
   }
 
   public parse(buffer: Buffer): Base {

@@ -18,9 +18,9 @@ export class UIntSerializer extends BaseSerializer<Base, Input, Output> {
     this._maxValue = 2 ** (bytesCount * 8) - 1;
   }
 
-  public appendToBytes(bytes: number[], input: Input): number[] {
+  public genOp(input: Input): BaseSerializer.Op {
     input = this._toBase(input);
-    return this._appendToBytes(bytes, input);
+    return this._genOp(input);
   }
 
   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {
@@ -45,14 +45,16 @@ export class UIntSerializer extends BaseSerializer<Base, Input, Output> {
     if (bytesCount > 6) throw new Error('Bytes count is too large for uint_t. Use big_uint_t or safe_uint_t instead');
   }
 
-  protected _appendToBytes(bytes: number[], input: number): number[] {
-    const serialized = new Array<number>(this.bytesCount).fill(0);
-    for (let i = 0; i < this.bytesCount; i++) {
-      serialized[i] = input & 0xff;
-      input /= 256;
-    }
-    bytes.push(...serialized.reverse());
-    return bytes;
+  protected _genOp(input: number): BaseSerializer.Op {
+    return {
+      length: this.bytesCount,
+      fn: (buffer, offset) => {
+        for (let i = offset + this.bytesCount - 1; i >= offset; i--) {
+          buffer[i] = input & 0xff;
+          input = Math.floor(input / 256);
+        }
+      },
+    };
   }
 
   private _toBase(input: Input): Base {

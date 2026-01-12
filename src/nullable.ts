@@ -13,13 +13,16 @@ export class NullableSerializer<T extends BaseSerializer<any, any, any>> extends
     super();
   }
 
-  public appendToBytes(bytes: number[], input: Input<T>): number[] {
-    if (input === null || input === undefined) {
-      bytes.push(0);
-      return bytes;
-    }
-    bytes.push(1);
-    return this.type.appendToBytes(bytes, input);
+  public genOp(input: Input<T>): BaseSerializer.Op {
+    if (input === null || input === undefined) return { length: 1, fn: (buffer, offset) => (buffer[offset] = 0) };
+    const innerOp = this.type.genOp(input);
+    return {
+      length: 1 + innerOp.length,
+      fn: (buffer, offset) => {
+        buffer[offset] = 1;
+        innerOp.fn(buffer, offset + 1);
+      },
+    };
   }
 
   public read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number } {

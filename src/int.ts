@@ -1,4 +1,4 @@
-import { BaseOf, InputOf, OutputOf } from './_base';
+import { BaseOf, BaseSerializer, InputOf, OutputOf } from './_base';
 import { UIntSerializer } from './uint';
 
 type Base = BaseOf<UIntSerializer>;
@@ -23,8 +23,8 @@ export class IntSerializer extends UIntSerializer {
     this.maxSignedValue = this.base - 1;
   }
 
-  public override appendToBytes(bytes: number[], input: Input): number[] {
-    return super._appendToBytes(bytes, this._toTwosComplement(input));
+  public override genOp(input: Input): BaseSerializer.Op {
+    return super._genOp(this._toTwosComplement(input));
   }
 
   public override read(buffer: Buffer, offset: number): { res: Base; cursor: number } {

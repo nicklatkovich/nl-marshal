@@ -10,10 +10,22 @@ export class VectorSerializer<T extends Serializer> extends BaseSerializer<Base<
     super();
   }
 
-  public appendToBytes(bytes: number[], input: Input<T>): number[] {
-    bytes = varuint.appendToBytes(bytes, input.length);
-    for (const e of input) bytes = this.type.appendToBytes(bytes, e);
-    return bytes;
+  public genOp(input: Input<T>): BaseSerializer.Op {
+    const ops: BaseSerializer.Op[] = [];
+    for (const e of input) ops.push(this.type.genOp(e));
+    const sizeOp = varuint.genOp(input.length);
+    const totalLength = sizeOp.length + ops.reduce((sum, op) => sum + op.length, 0);
+    return {
+      length: totalLength,
+      fn: (buffer, offset) => {
+        sizeOp.fn(buffer, offset);
+        offset += sizeOp.length;
+        for (const op of ops) {
+          op.fn(buffer, offset);
+          offset += op.length;
+        }
+      },
+    };
   }
 
   public read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number } {

@@ -18,11 +18,16 @@ export class BytesSerializer extends BaseSerializer<Base, Input, Output> {
     super();
   }
 
-  public appendToBytes(bytes: number[], input: Input): number[] {
+  public genOp(input: Input): BaseSerializer.Op {
     const buffer = this._toBase(input);
-    varuint.appendToBytes(bytes, buffer.length);
-    bytes.push(...buffer);
-    return bytes;
+    const sizeOp = varuint.genOp(buffer.length);
+    return {
+      length: sizeOp.length + buffer.length,
+      fn: (outBuffer, offset) => {
+        sizeOp.fn(outBuffer, offset);
+        buffer.copy(outBuffer, offset + sizeOp.length);
+      },
+    };
   }
 
   public read(buffer: Buffer, offset: number): { res: Base; cursor: number } {
@@ -87,12 +92,16 @@ export class FixedBytesSerializer extends BytesSerializer {
     super(encoding);
   }
 
-  public override appendToBytes(bytes: number[], input: Input): number[] {
+  public override genOp(input: Input): BaseSerializer.Op {
     const buffer = this._toBase(input);
     if (buffer.length !== this.size)
       throw new Error(`bytes: invalid size, expected ${this.size}, got ${buffer.length}`);
-    bytes.push(...buffer);
-    return bytes;
+    return {
+      length: this.size,
+      fn: (outBuffer, offset) => {
+        buffer.copy(outBuffer, offset);
+      },
+    };
   }
 
   public override read(buffer: Buffer, offset: number): { res: Base; cursor: number } {

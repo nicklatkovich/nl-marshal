@@ -17,11 +17,18 @@ export class StructSerializer<T extends StructDefinition> extends BaseSerializer
     this.difinition = { ...difinition };
   }
 
-  public appendToBytes(bytes: number[], input: Input<T>): number[] {
-    for (const key of this.keys) {
-      this.difinition[key].appendToBytes(bytes, input[key]);
-    }
-    return bytes;
+  public genOp(input: Input<T>): BaseSerializer.Op {
+    const ops = this.keys.map((key) => this.difinition[key].genOp(input[key]));
+    const totalLength = ops.reduce((sum, op) => sum + op.length, 0);
+    return {
+      length: totalLength,
+      fn: (buffer, offset) => {
+        for (const op of ops) {
+          op.fn(buffer, offset);
+          offset += op.length;
+        }
+      },
+    };
   }
 
   public read(buffer: Buffer, offset: number): { res: Base<T>; cursor: number } {
