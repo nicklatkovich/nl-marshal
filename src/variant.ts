@@ -1,27 +1,27 @@
-import { BaseSerializer } from './_base';
+import { BaseSerializer, Serializer } from './_base';
 import { varuint } from './varuint';
 
-type BaseTypeMap = Record<number, BaseSerializer<any, any, any>>;
+type BaseTypeMap = Record<number, Serializer>;
 
-type Base<T extends BaseTypeMap, K extends keyof T = keyof T> = K extends any
+type Base<T extends BaseTypeMap, K extends keyof T = keyof T> = K extends unknown
   ? K extends number
-    ? T[K] extends BaseSerializer<infer R, any, any>
+    ? T[K] extends BaseSerializer<infer R, unknown, unknown>
       ? [K, R]
       : never
     : never
   : never;
 
-type Input<T extends BaseTypeMap, K extends keyof T = keyof T> = K extends any
+type Input<T extends BaseTypeMap, K extends keyof T = keyof T> = K extends unknown
   ? K extends number
-    ? T[K] extends BaseSerializer<any, infer R, any>
+    ? T[K] extends BaseSerializer<unknown, infer R, unknown>
       ? [K, R]
       : never
     : never
   : never;
 
-type Output<T extends BaseTypeMap, K extends keyof T = keyof T> = K extends any
+type Output<T extends BaseTypeMap, K extends keyof T = keyof T> = K extends unknown
   ? K extends number
-    ? T[K] extends BaseSerializer<any, any, infer R>
+    ? T[K] extends BaseSerializer<unknown, unknown, infer R>
       ? [K, R]
       : never
     : never

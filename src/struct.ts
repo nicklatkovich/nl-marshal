@@ -1,6 +1,6 @@
-import { BaseSerializer, BaseOf, InputOf, OutputOf } from './_base';
+import { BaseSerializer, BaseOf, InputOf, OutputOf, Serializer } from './_base';
 
-export type StructDefinition = { [key: string]: BaseSerializer<any, any, any> };
+export type StructDefinition = { [key: string]: Serializer };
 
 type Base<T extends StructDefinition> = { [key in keyof T]: BaseOf<T[key]> };
 type Input<T extends StructDefinition> = { [key in keyof T]: InputOf<T[key]> };
@@ -35,23 +35,26 @@ export class StructSerializer<T extends StructDefinition> extends BaseSerializer
     let cursor = offset;
     const result: Partial<Base<T>> = {};
     for (const key of this.keys) {
-      ({ res: result[key], cursor } = this.difinition[key].read(buffer, cursor));
+      ({ res: result[key], cursor } = this.difinition[key].read(buffer, cursor) as {
+        res: BaseOf<T[keyof T]>;
+        cursor: number;
+      });
     }
     return { res: result as Base<T>, cursor };
   }
 
   public toJSON(input: Input<T>): Output<T> {
-    let result: Partial<Output<T>> = {};
+    const result: Partial<Output<T>> = {};
     for (const key of this.keys) {
-      result[key] = this.difinition[key].toJSON(input[key]);
+      result[key] = this.difinition[key].toJSON(input[key]) as OutputOf<T[keyof T]>;
     }
     return result as Output<T>;
   }
 
   public fromJSON(output: Output<T>): Base<T> {
-    let result: Partial<Output<T>> = {};
+    const result: Partial<Base<T>> = {};
     for (const key of this.keys) {
-      result[key] = this.difinition[key].fromJSON(output[key]);
+      result[key] = this.difinition[key].fromJSON(output[key]) as BaseOf<T[keyof T]>;
     }
     return result as Base<T>;
   }

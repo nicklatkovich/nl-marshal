@@ -87,7 +87,10 @@ export class BytesSerializer extends BaseSerializer<Base, Input, Output> {
 }
 
 export class FixedBytesSerializer extends BytesSerializer {
-  constructor(public readonly size: number, encoding: BytesEncoding = BytesEncoding.HEX) {
+  constructor(
+    public readonly size: number,
+    encoding: BytesEncoding = BytesEncoding.HEX,
+  ) {
     if (size <= 0 || !Number.isSafeInteger(size)) throw new Error('FixedBytesSerializer: invalid size');
     super(encoding);
   }
@@ -123,10 +126,30 @@ export class FixedBytesSerializer extends BytesSerializer {
   }
 }
 
-export const bytes = (encoding: BytesEncoding | { size: number; encoding: BytesEncoding } = BytesEncoding.HEX) => {
-  return typeof encoding === 'object'
+export const bytes = (encoding: BytesEncoding | { size: number; encoding: BytesEncoding } = BytesEncoding.HEX) =>
+  typeof encoding === 'object'
     ? new FixedBytesSerializer(encoding.size, encoding.encoding)
     : new BytesSerializer(encoding);
-};
 
-export const string = bytes(BytesEncoding.UTF8);
+const utf8 = bytes(BytesEncoding.UTF8);
+
+export class StringSerializer extends BaseSerializer<string, string, string> {
+  public genOp(input: string): BaseSerializer.Op {
+    return utf8.genOp(input);
+  }
+
+  public read(buffer: Buffer, offset: number): { res: string; cursor: number } {
+    const { res, cursor } = utf8.read(buffer, offset);
+    return { res: res.toString('utf8'), cursor };
+  }
+
+  public toJSON(input: string): string {
+    return input;
+  }
+
+  public fromJSON(output: string): string {
+    return output;
+  }
+}
+
+export const string = new StringSerializer();

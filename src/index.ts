@@ -4,6 +4,7 @@ export * from './big_uint';
 export * from './bool';
 export * from './bytes';
 export * from './date';
+export * from './empty';
 export * from './int';
 export * from './nullable';
 export * from './safe_integer';
